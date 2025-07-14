@@ -1,0 +1,732 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Portfolio Program Project Gantt Chart - Production Grade",
+  "autosize": "pad",
+  "width": 1400,
+  "padding": {"left": 5, "right": 0, "top": 5, "bottom": 0},
+  "signals": [
+    {"name": "height", "update": "600"},
+    {"name": "showTooltips", "value": true},
+    {"name": "showButtons", "value": true},
+    {"name": "showStatusLegend", "value": true},
+    {"name": "showTodayLine", "value": true},
+    {
+      "name": "startGrain",
+      "value": "Months",
+      "description": "Days, Months, Years or All"
+    },
+    {
+      "name": "initHierarchyState",
+      "value": "open",
+      "description": "open or close"
+    },
+    {"name": "textColour", "value": "#2c3e50"},
+    {"name": "textColourLight", "value": "#7f8c8d"},
+    {"name": "backgroundColor", "value": "#ffffff"},
+    {"name": "gridColor", "value": "#ecf0f1"},
+    {
+      "name": "statusColors",
+      "value": {
+        "On Track": "#27ae60",
+        "At Risk": "#f39c12", 
+        "Delayed": "#e74c3c",
+        "Completed": "#3498db",
+        "Not Started": "#95a5a6"
+      }
+    },
+    {
+      "name": "hierarchyColors",
+      "value": {
+        "Portfolio": "#34495e",
+        "Program": "#5d6d7e", 
+        "Project": "#85929e"
+      }
+    },
+    {"name": "yRowHeight", "value": 40},
+    {"name": "yRowPadding", "value": 0.15},
+    {"name": "yPaddingInner", "update": "yRowPadding * yRowHeight"},
+    {"name": "portfolioColumnWidth", "value": 120},
+    {"name": "programColumnWidth", "value": 120},
+    {"name": "projectColumnWidth", "value": 150},
+    {"name": "managerColumnWidth", "value": 100},
+    {"name": "g0DateColumnWidth", "value": 80},
+    {"name": "g5DateColumnWidth", "value": 80},
+    {"name": "prevG5DateColumnWidth", "value": 80},
+    {"name": "statusColumnWidth", "value": 80},
+    {"name": "columnPadding", "value": 12},
+    {"name": "oneDay", "update": "1000*60*60*24"},
+    {
+      "name": "timeoffset",
+      "update": "timezoneoffset(data('dataset')[0]['g0Date']) * 60 *1000"
+    },
+    {
+      "name": "dayBandwidth",
+      "update": "scale('x', timeOffset('day', datetime(2000,1,1),1)) - scale('x', datetime(2000,1,1))"
+    },
+    {"name": "dayBandwidthRound", "update": "(round(dayBandwidth *100)/100)"},
+    {"name": "minDayBandwidth", "value": 25},
+    {"name": "minMonthBandwidth", "value": 4},
+    {"name": "minYearBandwidth", "value": 1.2},
+    {"name": "milestoneSymbolSize", "value": 500},
+    {"name": "arrowSymbolSize", "value": 80},
+    {"name": "hierarchySymbolHeight", "update": "bandwidth('y')-yPaddingInner-8"},
+    {"name": "hierarchySymbolWidth", "value": 12},
+    {
+      "name": "columnsWidth",
+      "update": "portfolioColumnWidth+programColumnWidth+projectColumnWidth+managerColumnWidth+g0DateColumnWidth+g5DateColumnWidth+prevG5DateColumnWidth+statusColumnWidth+(columnPadding*8)"
+    },
+    {"name": "ganttWidth", "update": "width-columnsWidth-minDayBandwidth"},
+    {
+      "name": "dayExt",
+      "update": "[data('xExt')[0]['s']-oneDay,data('xExt')[0]['s']+ ((ganttWidth-minDayBandwidth)/minDayBandwidth)*oneDay]"
+    },
+    {
+      "name": "monthExt",
+      "update": "[data('xExt')[0]['s']-oneDay ,data('xExt')[0]['s'] + ganttWidth/2*oneDay]"
+    },
+    {
+      "name": "yearExt",
+      "update": "[data('xExt')[0]['s']-oneDay,data('xExt')[0]['s'] + ganttWidth/0.35*oneDay]"
+    },
+    {
+      "name": "allExt",
+      "update": "[data('xExt')[0]['s']-oneDay,data('xExt')[0]['e']+oneDay*9]"
+    },
+    {
+      "name": "xExt",
+      "update": "startGrain=='All'?allExt:startGrain=='Years'?yearExt:startGrain=='Months'?monthExt:dayExt"
+    },
+    {
+      "name": "today",
+      "update": "+datetime(year(now()),month(now()),date(now()))"
+    },
+    {"name": "todayRule", "update": "timeFormat(today,'%d/%m/%y')"},
+    {
+      "name": "zoom",
+      "value": 1,
+      "on": [
+        {
+          "events": "wheel!",
+          "force": true,
+          "update": "x()>columnsWidth?pow(1.001, (event.deltaY) * pow(16, event.deltaMode)):1"
+        }
+      ]
+    },
+    {"name": "xDomMinSpan", "update": "span(dayExt)"},
+    {"name": "xDomMaxSpan", "update": "round((ganttWidth/0.13)*oneDay)"},
+    {
+      "name": "xDom",
+      "update": "xExt",
+      "on": [
+        {
+          "events": {"signal": "xDomPre"},
+          "update": "span(xDomPre)<xDomMinSpan?[anchor + (xDom[0] - anchor) * (zoom*(xDomMinSpan/span(xDomPre))), anchor + (xDom[1] - anchor) * (zoom*(xDomMinSpan/span(xDomPre)))]:span(xDomPre)>xDomMaxSpan?[anchor + (xDom[0] - anchor) * (zoom*(xDomMaxSpan/span(xDomPre))), anchor + (xDom[1] - anchor) * (zoom*(xDomMaxSpan/span(xDomPre)))] :xDomPre"
+        },
+        {
+          "events": {"signal": "delta"},
+          "update": "[xCur[0] + span(xCur) * delta[0] / width, xCur[1] + span(xCur) * delta[0] / width]"
+        },
+        {"events": "dblclick", "update": "xExt"},
+        {
+          "events": "@buttonMarks:click",
+          "update": "datum.text=='All'?allExt:datum.text=='Years'?yearExt:datum.text=='Months'?monthExt:datum.text=='Days'?dayExt:xDom"
+        }
+      ]
+    },
+    {"name": "scaledHeight", "update": "data('yScale').length * yRowHeight"},
+    {
+      "name": "yRange",
+      "update": "[yRange!=null?yRange[0]:0,yRange!=null?yRange[0]+scaledHeight:scaledHeight]",
+      "on": [
+        {
+          "events": [{"signal": "delta"}],
+          "update": "clampRange( [yCur[0] + span(yCur) * delta[1] / scaledHeight, yCur[1] + span(yCur) * delta[1] / scaledHeight],height>=scaledHeight?0: height-scaledHeight,height>=scaledHeight?height:scaledHeight)"
+        },
+        {"events": "dblclick", "update": "[0,scaledHeight]"},
+        {
+          "events": {"signal": "closeAll"},
+          "update": "closeAll?[0, scaledHeight]:yRange"
+        }
+      ]
+    },
+    {
+      "name": "xDomPre",
+      "value": [0, 0],
+      "on": [
+        {
+          "events": {"signal": "zoom"},
+          "update": "[anchor + (xDom[0] - anchor) * zoom, anchor + (xDom[1] - anchor) * zoom]"
+        }
+      ]
+    },
+    {
+      "name": "anchor",
+      "value": 0,
+      "on": [{"events": "wheel", "update": "+invert('x', x()-columnsWidth)"}]
+    },
+    {
+      "name": "xCur",
+      "value": [0, 0],
+      "on": [{"events": "pointerdown", "update": "slice(xDom)"}]
+    },
+    {
+      "name": "yCur",
+      "value": [0, 0],
+      "on": [{"events": "pointerdown", "update": "slice(yRange)"}]
+    },
+    {
+      "name": "delta",
+      "value": [0, 0],
+      "on": [
+        {
+          "events": [
+            {
+              "source": "window",
+              "type": "pointermove",
+              "consume": true,
+              "between": [
+                {"type": "pointerdown"},
+                {"source": "window", "type": "pointerup"}
+              ]
+            }
+          ],
+          "update": "down ? [down[0]-x(), y()-down[1]] : [0,0]"
+        }
+      ]
+    },
+    {
+      "name": "down",
+      "value": null,
+      "on": [
+        {"events": "pointerdown", "update": "xy()"},
+        {"events": "pointerup", "update": "null"}
+      ]
+    },
+    {
+      "name": "hierarchyClicked",
+      "value": null,
+      "on": [
+        {
+          "events": "@hierarchySelector:click,@hierarchyOutline:click",
+          "update": "yCur[0]==yRange[0] && yCur[1]==yRange[1]&& xCur[0]===xDom[0]&& xCur[1]===xDom[1] && datum.portfolio==datum.program && datum.program==datum.project? {portfolio: datum.portfolio, program: datum.program}:null",
+          "force": true
+        }
+      ]
+    },
+    {
+      "name": "closeAll",
+      "value": false,
+      "on": [
+        {
+          "events": "@closeAllButton:click",
+          "update": "!closeAll"
+        }
+      ]
+    }
+  ],
+  "data": [
+    {
+      "name": "dataset",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "g0DateParsed",
+          "expr": "datetime(datum.g0Date)"
+        },
+        {
+          "type": "formula", 
+          "as": "g5DateParsed",
+          "expr": "datetime(datum.g5Date)"
+        },
+        {
+          "type": "formula",
+          "as": "prevG5DateParsed", 
+          "expr": "datum.prevG5Date ? datetime(datum.prevG5Date) : null"
+        },
+        {
+          "type": "formula",
+          "as": "duration",
+          "expr": "datum.g5DateParsed - datum.g0DateParsed"
+        },
+        {
+          "type": "formula",
+          "as": "isDelayed",
+          "expr": "datum.prevG5DateParsed && datum.g5DateParsed > datum.prevG5DateParsed"
+        },
+        {
+          "type": "formula",
+          "as": "delayDays",
+          "expr": "datum.isDelayed ? (datum.g5DateParsed - datum.prevG5DateParsed) / oneDay : 0"
+        }
+      ]
+    },
+    {
+      "name": "xExt",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "extent",
+          "field": "g0DateParsed",
+          "signal": "xExtSignal"
+        }
+      ]
+    },
+    {
+      "name": "yScale",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["portfolio", "program", "project"],
+          "fields": ["portfolio", "program", "project"],
+          "ops": ["distinct", "distinct", "distinct"]
+        },
+        {
+          "type": "window",
+          "sort": [{"field": "portfolio"}, {"field": "program"}, {"field": "project"}],
+          "frame": [null, null]
+        }
+      ]
+    }
+  ],
+  "scales": [
+    {
+      "name": "x",
+      "type": "time",
+      "domain": {"signal": "xDom"},
+      "range": [{"signal": "columnsWidth"}, {"signal": "width"}]
+    },
+    {
+      "name": "y",
+      "type": "band",
+      "domain": {"data": "yScale", "field": "project"},
+      "range": [{"signal": "yRange[0]"}, {"signal": "yRange[1]"}],
+      "padding": {"signal": "yPaddingInner"}
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": ["On Track", "At Risk", "Delayed", "Completed", "Not Started"],
+      "range": ["#27ae60", "#f39c12", "#e74c3c", "#3498db", "#95a5a6"]
+    },
+    {
+      "name": "hierarchyColor",
+      "type": "ordinal", 
+      "domain": ["Portfolio", "Program", "Project"],
+      "range": ["#34495e", "#5d6d7e", "#85929e"]
+    }
+  ],
+  "axes": [
+    {
+      "orient": "top",
+      "scale": "x",
+      "title": "Project Timeline",
+      "titleColor": {"signal": "textColour"},
+      "titleFontSize": 14,
+      "titleFontWeight": "bold",
+      "titlePadding": 10,
+      "tickColor": {"signal": "gridColor"},
+      "domainColor": {"signal": "gridColor"},
+      "labelColor": {"signal": "textColour"},
+      "labelFontSize": 11,
+      "grid": true,
+      "gridColor": {"signal": "gridColor"},
+      "gridOpacity": 0.5
+    }
+  ],
+  "marks": [
+    {
+      "type": "rect",
+      "name": "background",
+      "encode": {
+        "enter": {
+          "width": {"signal": "width"},
+          "height": {"signal": "height"},
+          "fill": {"signal": "backgroundColor"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "columnHeaders",
+      "encode": {
+        "enter": {
+          "width": {"signal": "columnsWidth"},
+          "height": {"signal": "height"},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "portfolioHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Portfolio"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text", 
+      "name": "programHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Program"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "projectHeader", 
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Project"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "managerHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Manager"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g0Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "G0 Date"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g5Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "G5 Date"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "prevG5Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Prev G5"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "statusHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth + statusColumnWidth/2"},
+          "y": {"value": 25},
+          "text": {"value": "Status"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "rowBackgrounds",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "y": {"scale": "y", "field": "project"},
+          "height": {"signal": "yRowHeight"},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 0.5}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "portfolioLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "portfolio"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "programLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "program"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "projectLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "project"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "managerLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "projectManager"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g0Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "g0Date"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g5Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "g5Date"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "prevG5Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "text": {"field": "prevG5Date"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColourLight"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "statusIndicators",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "portfolioColumnWidth + programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth + statusColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2"},
+          "width": {"value": 12},
+          "height": {"value": 12},
+          "fill": {"scale": "color", "field": "projectStatus"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 2}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "ganttBars",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "field": "g0DateParsed"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yPaddingInner/2"},
+          "height": {"signal": "yRowHeight - yPaddingInner"},
+          "fill": {"scale": "color", "field": "projectStatus"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 3}
+        },
+        "update": {
+          "width": {"scale": "x", "field": "duration", "band": 1}
+        }
+      }
+    },
+    {
+      "type": "rule",
+      "name": "todayLine",
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "signal": "today"},
+          "y": {"value": 0},
+          "y2": {"signal": "height"},
+          "stroke": {"value": "#e74c3c"},
+          "strokeWidth": {"value": 2},
+          "strokeDash": {"value": [5, 5]},
+          "opacity": {"signal": "showTodayLine ? 0.8 : 0"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "todayLabel",
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "signal": "today"},
+          "y": {"value": 15},
+          "text": {"signal": "'Today: ' + todayRule"},
+          "fontSize": {"value": 10},
+          "fill": {"value": "#e74c3c"},
+          "textAnchor": {"value": "middle"},
+          "opacity": {"signal": "showTodayLine ? 0.8 : 0"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "buttonBackground",
+      "encode": {
+        "enter": {
+          "x": {"value": 10},
+          "y": {"value": 50},
+          "width": {"value": 300},
+          "height": {"value": 35},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 5}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "buttonMarks",
+      "encode": {
+        "enter": {
+          "x": {"value": 20},
+          "y": {"value": 72},
+          "text": {"value": ["Days", "Months", "Years", "All"]},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"}
+        },
+        "update": {
+          "x": {"signal": "datum.text=='Days'?20:datum.text=='Months'?70:datum.text=='Years'?130:180"},
+          "fill": {"signal": "startGrain==datum.text?textColour:textColourLight"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "closeAllButton",
+      "encode": {
+        "enter": {
+          "x": {"value": 200},
+          "y": {"value": 72},
+          "text": {"value": "Expand All"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"}
+        }
+      }
+    }
+  ]
+} 

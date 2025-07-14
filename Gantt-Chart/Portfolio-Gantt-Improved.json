@@ -1,0 +1,852 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Portfolio Program Project Gantt Chart - Production Grade (Improved)",
+  "autosize": "pad",
+  "width": 1400,
+  "padding": {"left": 5, "right": 0, "top": 5, "bottom": 0},
+  "signals": [
+    {"name": "height", "update": "600"},
+    {"name": "showTooltips", "value": true},
+    {"name": "showButtons", "value": true},
+    {"name": "showStatusLegend", "value": true},
+    {"name": "showTodayLine", "value": true},
+    {"name": "selectedPortfolio", "value": "All"},
+    {
+      "name": "startGrain",
+      "value": "Months",
+      "description": "Days, Months, Years or All"
+    },
+    {"name": "textColour", "value": "#2c3e50"},
+    {"name": "textColourLight", "value": "#7f8c8d"},
+    {"name": "backgroundColor", "value": "#ffffff"},
+    {"name": "gridColor", "value": "#ecf0f1"},
+    {"name": "yRowHeight", "value": 45},
+    {"name": "yRowPadding", "value": 0.12},
+    {"name": "yPaddingInner", "update": "yRowPadding * yRowHeight"},
+    {"name": "programColumnWidth", "value": 140},
+    {"name": "projectColumnWidth", "value": 180},
+    {"name": "managerColumnWidth", "value": 120},
+    {"name": "g0DateColumnWidth", "value": 90},
+    {"name": "g5DateColumnWidth", "value": 90},
+    {"name": "prevG5DateColumnWidth", "value": 90},
+    {"name": "statusColumnWidth", "value": 100},
+    {"name": "columnPadding", "value": 15},
+    {"name": "oneDay", "update": "1000*60*60*24"},
+    {"name": "minDayBandwidth", "value": 30},
+    {"name": "minMonthBandwidth", "value": 5},
+    {"name": "minYearBandwidth", "value": 1.5},
+    {
+      "name": "columnsWidth",
+      "update": "programColumnWidth+projectColumnWidth+managerColumnWidth+g0DateColumnWidth+g5DateColumnWidth+prevG5DateColumnWidth+statusColumnWidth+(columnPadding*7)"
+    },
+    {"name": "ganttWidth", "update": "width-columnsWidth-minDayBandwidth"},
+    {
+      "name": "today",
+      "update": "+datetime(year(now()),month(now()),date(now()))"
+    },
+    {"name": "todayRule", "update": "timeFormat(today,'%d/%m/%y')"},
+    {
+      "name": "zoom",
+      "value": 1,
+      "on": [
+        {
+          "events": "wheel!",
+          "force": true,
+          "update": "x()>columnsWidth?pow(1.001, (event.deltaY) * pow(16, event.deltaMode)):1"
+        }
+      ]
+    },
+    {
+      "name": "xDom",
+      "update": "[data('xExt')[0]['s']-oneDay,data('xExt')[0]['e']+oneDay*9]",
+      "on": [
+        {
+          "events": "dblclick",
+          "update": "[data('xExt')[0]['s']-oneDay,data('xExt')[0]['e']+oneDay*9]"
+        },
+        {
+          "events": "@zoomButtons:click",
+          "update": "datum.text=='All'?[data('xExt')[0]['s']-oneDay,data('xExt')[0]['e']+oneDay*9]:datum.text=='Years'?[data('xExt')[0]['s']-oneDay,data('xExt')[0]['s']+ganttWidth/0.35*oneDay]:datum.text=='Months'?[data('xExt')[0]['s']-oneDay,data('xExt')[0]['s']+ganttWidth/2*oneDay]:[data('xExt')[0]['s']-oneDay,data('xExt')[0]['s']+((ganttWidth-minDayBandwidth)/minDayBandwidth)*oneDay]"
+        }
+      ]
+    },
+    {"name": "scaledHeight", "update": "data('yScale').length * yRowHeight"},
+    {
+      "name": "yRange",
+      "update": "[0,scaledHeight]",
+      "on": [
+        {"events": "dblclick", "update": "[0,scaledHeight]"}
+      ]
+    },
+    {
+      "name": "tooltip",
+      "value": {},
+      "on": [
+        {"events": "@ganttBars:mouseover", "update": "datum"},
+        {"events": "@ganttBars:mouseout", "update": "{}"}
+      ]
+    }
+  ],
+  "data": [
+    {
+      "name": "dataset",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "selectedPortfolio == 'All' || datum.portfolio == selectedPortfolio"
+        },
+        {
+          "type": "formula",
+          "as": "g0DateParsed",
+          "expr": "datetime(datum.g0Date)"
+        },
+        {
+          "type": "formula", 
+          "as": "g5DateParsed",
+          "expr": "datetime(datum.g5Date)"
+        },
+        {
+          "type": "formula",
+          "as": "prevG5DateParsed", 
+          "expr": "datum.prevG5Date ? datetime(datum.prevG5Date) : null"
+        },
+        {
+          "type": "formula",
+          "as": "duration",
+          "expr": "datum.g5DateParsed - datum.g0DateParsed"
+        },
+        {
+          "type": "formula",
+          "as": "isDelayed",
+          "expr": "datum.prevG5DateParsed && datum.g5DateParsed > datum.prevG5DateParsed"
+        },
+        {
+          "type": "formula",
+          "as": "delayDays",
+          "expr": "datum.isDelayed ? (datum.g5DateParsed - datum.prevG5DateParsed) / oneDay : 0"
+        },
+        {
+          "type": "formula",
+          "as": "g0Formatted",
+          "expr": "timeFormat(datetime(datum.g0Date), '%d/%m/%Y')"
+        },
+        {
+          "type": "formula",
+          "as": "g5Formatted",
+          "expr": "timeFormat(datetime(datum.g5Date), '%d/%m/%Y')"
+        },
+        {
+          "type": "formula",
+          "as": "prevG5Formatted",
+          "expr": "datum.prevG5Date ? timeFormat(datetime(datum.prevG5Date), '%d/%m/%Y') : 'N/A'"
+        },
+        {
+          "type": "formula",
+          "as": "durationDays",
+          "expr": "round((datum.g5DateParsed - datum.g0DateParsed) / oneDay)"
+        }
+      ]
+    },
+    {
+      "name": "xExt",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "extent",
+          "field": "g0DateParsed",
+          "signal": "xExtSignal"
+        }
+      ]
+    },
+    {
+      "name": "yScale",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["program", "project"],
+          "fields": ["program", "project"],
+          "ops": ["distinct", "distinct"]
+        },
+        {
+          "type": "window",
+          "sort": [{"field": "program"}, {"field": "project"}],
+          "frame": [null, null]
+        }
+      ]
+    },
+    {
+      "name": "portfolios",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["portfolio"],
+          "fields": ["portfolio"],
+          "ops": ["distinct"]
+        },
+        {
+          "type": "window",
+          "sort": [{"field": "portfolio"}],
+          "frame": [null, null]
+        }
+      ]
+    }
+  ],
+  "scales": [
+    {
+      "name": "x",
+      "type": "time",
+      "domain": {"signal": "xDom"},
+      "range": [{"signal": "columnsWidth"}, {"signal": "width"}]
+    },
+    {
+      "name": "y",
+      "type": "band",
+      "domain": {"data": "yScale", "field": "project"},
+      "range": [{"signal": "yRange[0]"}, {"signal": "yRange[1]"}],
+      "padding": {"signal": "yPaddingInner"}
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": ["On Track", "At Risk", "Delayed", "Completed", "Not Started"],
+      "range": ["#27ae60", "#f39c12", "#e74c3c", "#3498db", "#95a5a6"]
+    },
+    {
+      "name": "programColor",
+      "type": "ordinal",
+      "domain": {"data": "yScale", "field": "program"},
+      "range": "category"
+    }
+  ],
+  "axes": [
+    {
+      "orient": "top",
+      "scale": "x",
+      "title": "Project Timeline",
+      "titleColor": {"signal": "textColour"},
+      "titleFontSize": 16,
+      "titleFontWeight": "bold",
+      "titlePadding": 15,
+      "tickColor": {"signal": "gridColor"},
+      "domainColor": {"signal": "gridColor"},
+      "labelColor": {"signal": "textColour"},
+      "labelFontSize": 12,
+      "grid": true,
+      "gridColor": {"signal": "gridColor"},
+      "gridOpacity": 0.5
+    }
+  ],
+  "marks": [
+    {
+      "type": "rect",
+      "name": "background",
+      "encode": {
+        "enter": {
+          "width": {"signal": "width"},
+          "height": {"signal": "height"},
+          "fill": {"signal": "backgroundColor"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "filterPanel",
+      "encode": {
+        "enter": {
+          "x": {"value": 10},
+          "y": {"value": 10},
+          "width": {"value": 300},
+          "height": {"value": 60},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 8}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "filterLabel",
+      "encode": {
+        "enter": {
+          "x": {"value": 20},
+          "y": {"value": 30},
+          "text": {"value": "Portfolio Filter:"},
+          "fontSize": {"value": 14},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "dropdownBackground",
+      "encode": {
+        "enter": {
+          "x": {"value": 20},
+          "y": {"value": 35},
+          "width": {"value": 200},
+          "height": {"value": 25},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "dropdownText",
+      "encode": {
+        "enter": {
+          "x": {"value": 30},
+          "y": {"value": 52},
+          "text": {"signal": "selectedPortfolio"},
+          "fontSize": {"value": 12},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "dropdownArrow",
+      "encode": {
+        "enter": {
+          "x": {"value": 210},
+          "y": {"value": 52},
+          "text": {"value": "▼"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "dropdownOptions",
+      "encode": {
+        "enter": {
+          "x": {"value": 20},
+          "y": {"value": 65},
+          "width": {"value": 200},
+          "height": {"value": 0},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4},
+          "opacity": {"value": 0}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "portfolioOptions",
+      "from": {"data": "portfolios"},
+      "encode": {
+        "enter": {
+          "x": {"value": 30},
+          "y": {"signal": "70 + datum.index * 20"},
+          "text": {"field": "portfolio"},
+          "fontSize": {"value": 12},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"},
+          "opacity": {"value": 0}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "columnHeaders",
+      "encode": {
+        "enter": {
+          "x": {"signal": "columnsWidth"},
+          "y": {"value": 80},
+          "width": {"signal": "width - columnsWidth"},
+          "height": {"value": 40},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "tableHeaders",
+      "encode": {
+        "enter": {
+          "x": {"value": 0},
+          "y": {"value": 80},
+          "width": {"signal": "columnsWidth"},
+          "height": {"value": 40},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "programHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "Program"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "projectHeader", 
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "Project"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "managerHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "Manager"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g0Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "G0 Date"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g5Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "G5 Date"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "prevG5Header",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "Prev G5"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "statusHeader",
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth + statusColumnWidth/2"},
+          "y": {"value": 105},
+          "text": {"value": "Status"},
+          "fontSize": {"value": 13},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "rowBackgrounds",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"value": 120},
+          "height": {"signal": "yRowHeight"},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 0.5}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "programLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "program"},
+          "fontSize": {"value": 12},
+          "fontWeight": {"value": "bold"},
+          "fill": {"scale": "programColor", "field": "program"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "projectLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "project"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "managerLabels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "projectManager"},
+          "fontSize": {"value": 11},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g0Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "g0Formatted"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "g5Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "g5Formatted"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "prevG5Labels",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "text": {"field": "prevG5Formatted"},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColourLight"},
+          "textAnchor": {"value": "middle"},
+          "align": {"value": "center"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "statusIndicators",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"signal": "programColumnWidth + projectColumnWidth + managerColumnWidth + g0DateColumnWidth + g5DateColumnWidth + prevG5DateColumnWidth + statusColumnWidth/2"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yRowHeight/2 + 120"},
+          "width": {"value": 14},
+          "height": {"value": 14},
+          "fill": {"scale": "color", "field": "projectStatus"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 3}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "ganttBars",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "field": "g0DateParsed"},
+          "y": {"scale": "y", "field": "project"},
+          "dy": {"signal": "yPaddingInner/2 + 120"},
+          "height": {"signal": "yRowHeight - yPaddingInner"},
+          "fill": {"scale": "color", "field": "projectStatus"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4},
+          "cursor": {"value": "pointer"}
+        },
+        "update": {
+          "width": {"scale": "x", "field": "duration", "band": 1}
+        }
+      }
+    },
+    {
+      "type": "rule",
+      "name": "todayLine",
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "signal": "today"},
+          "y": {"value": 120},
+          "y2": {"signal": "height"},
+          "stroke": {"value": "#e74c3c"},
+          "strokeWidth": {"value": 2},
+          "strokeDash": {"value": [5, 5]},
+          "opacity": {"signal": "showTodayLine ? 0.8 : 0"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "todayLabel",
+      "encode": {
+        "enter": {
+          "x": {"scale": "x", "signal": "today"},
+          "y": {"value": 135},
+          "text": {"signal": "'Today: ' + todayRule"},
+          "fontSize": {"value": 11},
+          "fill": {"value": "#e74c3c"},
+          "textAnchor": {"value": "middle"},
+          "opacity": {"signal": "showTodayLine ? 0.8 : 0"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "zoomPanel",
+      "encode": {
+        "enter": {
+          "x": {"value": 320},
+          "y": {"value": 10},
+          "width": {"value": 350},
+          "height": {"value": 60},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 8}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "zoomLabel",
+      "encode": {
+        "enter": {
+          "x": {"value": 330},
+          "y": {"value": 30},
+          "text": {"value": "Timeline Zoom:"},
+          "fontSize": {"value": 14},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "zoomButtons",
+      "encode": {
+        "enter": {
+          "x": {"value": 330},
+          "y": {"value": 35},
+          "width": {"value": 330},
+          "height": {"value": 25},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "zoomButtonMarks",
+      "encode": {
+        "enter": {
+          "x": {"value": 340},
+          "y": {"value": 52},
+          "text": {"value": ["Days", "Months", "Years", "All"]},
+          "fontSize": {"value": 12},
+          "fill": {"signal": "textColour"},
+          "cursor": {"value": "pointer"}
+        },
+        "update": {
+          "x": {"signal": "datum.text=='Days'?340:datum.text=='Months'?390:datum.text=='Years'?450:510"},
+          "fill": {"signal": "startGrain==datum.text?textColour:textColourLight"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "legendPanel",
+      "encode": {
+        "enter": {
+          "x": {"value": 680},
+          "y": {"value": 10},
+          "width": {"value": 300},
+          "height": {"value": 60},
+          "fill": {"value": "#f8f9fa"},
+          "stroke": {"signal": "gridColor"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 8}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "legendLabel",
+      "encode": {
+        "enter": {
+          "x": {"value": 690},
+          "y": {"value": 30},
+          "text": {"value": "Status Legend:"},
+          "fontSize": {"value": 14},
+          "fontWeight": {"value": "bold"},
+          "fill": {"signal": "textColour"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "legendItems",
+      "encode": {
+        "enter": {
+          "x": {"value": 690},
+          "y": {"value": 35},
+          "width": {"value": 280},
+          "height": {"value": 25},
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "legendStatusIndicators",
+      "encode": {
+        "enter": {
+          "x": {"value": 700},
+          "y": {"value": 42},
+          "width": {"value": 12},
+          "height": {"value": 12},
+          "fill": {"value": ["#27ae60", "#f39c12", "#e74c3c", "#3498db", "#95a5a6"]},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 2}
+        },
+        "update": {
+          "x": {"signal": "700 + datum.index * 55"}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "legendText",
+      "encode": {
+        "enter": {
+          "x": {"value": 715},
+          "y": {"value": 52},
+          "text": {"value": ["On Track", "At Risk", "Delayed", "Completed", "Not Started"]},
+          "fontSize": {"value": 10},
+          "fill": {"signal": "textColour"}
+        },
+        "update": {
+          "x": {"signal": "715 + datum.index * 55"}
+        }
+      }
+    },
+    {
+      "type": "rect",
+      "name": "tooltip",
+      "encode": {
+        "enter": {
+          "fill": {"value": "#ffffff"},
+          "stroke": {"signal": "textColour"},
+          "strokeWidth": {"value": 1},
+          "cornerRadius": {"value": 4},
+          "opacity": {"value": 0}
+        }
+      }
+    },
+    {
+      "type": "text",
+      "name": "tooltipText",
+      "encode": {
+        "enter": {
+          "fontSize": {"value": 12},
+          "fill": {"signal": "textColour"},
+          "opacity": {"value": 0}
+        }
+      }
+    }
+  ]
+} 
