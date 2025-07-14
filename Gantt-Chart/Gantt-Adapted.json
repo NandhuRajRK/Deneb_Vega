@@ -216,6 +216,19 @@
       ]
     },
     {
+      "name": "yRange",
+      "value": [
+        0,
+        0
+      ],
+      "on": [
+        {
+          "events": "pointerdown",
+          "update": "slice(domain('y'))"
+        }
+      ]
+    },
+    {
       "name": "anchor",
       "value": 0,
       "on": [
