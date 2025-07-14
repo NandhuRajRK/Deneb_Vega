@@ -1,6 +1,6 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Simple Portfolio Program Project Gantt Chart",
+  "description": "Simple Program Project Gantt Chart - Fixed Timeline",
   "autosize": "pad",
   "width": 1400,
   "padding": {"left": 5, "right": 0, "top": 5, "bottom": 0},
@@ -43,6 +43,48 @@
   "data": [
     {
       "name": "dataset",
+      "values": [
+        {
+          "program": "Cloud Migration",
+          "project": "AWS Infrastructure Setup",
+          "projectManager": "Sarah Johnson",
+          "g0Date": "01/03/2024",
+          "g5Date": "15/06/2024",
+          "projectStatus": "On Track"
+        },
+        {
+          "program": "Cloud Migration", 
+          "project": "Data Migration",
+          "projectManager": "Mike Chen",
+          "g0Date": "01/04/2024",
+          "g5Date": "30/07/2024",
+          "projectStatus": "At Risk"
+        },
+        {
+          "program": "Cloud Migration",
+          "project": "Application Modernization",
+          "projectManager": "Lisa Rodriguez",
+          "g0Date": "01/05/2024",
+          "g5Date": "30/09/2024",
+          "projectStatus": "Delayed"
+        },
+        {
+          "program": "Security Enhancement",
+          "project": "Zero Trust Implementation",
+          "projectManager": "David Kim",
+          "g0Date": "01/02/2024",
+          "g5Date": "31/05/2024",
+          "projectStatus": "Completed"
+        },
+        {
+          "program": "Security Enhancement",
+          "project": "SIEM Integration",
+          "projectManager": "Alex Thompson",
+          "g0Date": "01/06/2024",
+          "g5Date": "31/10/2024",
+          "projectStatus": "Not Started"
+        }
+      ],
       "transform": [
         {
           "type": "formula",
@@ -75,51 +117,20 @@
           "expr": "round((datum.g5DateParsed - datum.g0DateParsed) / oneDay)"
         }
       ]
-    },
-    {
-      "name": "xExt",
-      "source": "dataset",
-      "transform": [
-        {
-          "type": "extent",
-          "field": "g0DateParsed"
-        },
-        {
-          "type": "extent",
-          "field": "g5DateParsed"
-        }
-      ]
-    },
-    {
-      "name": "yScale",
-      "source": "dataset",
-      "transform": [
-        {
-          "type": "aggregate",
-          "groupby": ["program", "project"],
-          "fields": ["program", "project"],
-          "ops": ["distinct", "distinct"]
-        },
-        {
-          "type": "window",
-          "sort": [{"field": "program"}, {"field": "project"}],
-          "frame": [null, null]
-        }
-      ]
     }
   ],
   "scales": [
     {
       "name": "x",
       "type": "time",
-      "domain": {"signal": "[data('xExt')[0]['s']-oneDay*7,data('xExt')[1]['e']+oneDay*7]"},
+      "domain": {"data": "dataset", "field": "g0DateParsed"},
       "range": [{"signal": "columnsWidth"}, {"signal": "width"}]
     },
     {
       "name": "y",
       "type": "band",
-      "domain": {"data": "yScale", "field": "project"},
-      "range": [0, {"signal": "data('yScale').length * yRowHeight"}],
+      "domain": {"data": "dataset", "field": "project"},
+      "range": [0, {"signal": "data('dataset').length * yRowHeight"}],
       "padding": {"signal": "yPaddingInner"}
     },
     {
@@ -131,7 +142,7 @@
     {
       "name": "programColor",
       "type": "ordinal",
-      "domain": {"data": "yScale", "field": "program"},
+      "domain": {"data": "dataset", "field": "program"},
       "range": "category"
     }
   ],
@@ -404,46 +415,6 @@
           "fill": {"value": "#e74c3c"},
           "textAnchor": {"value": "middle"},
           "opacity": {"signal": "showTodayLine ? 0.8 : 0"}
-        }
-      }
-    },
-    {
-      "type": "rect",
-      "name": "programGroupHeaders",
-      "from": {"data": "dataset"},
-      "encode": {
-        "enter": {
-          "y": {"scale": "y", "field": "project"},
-          "dy": {"value": 40},
-          "height": {"signal": "yRowHeight"},
-          "fill": {"value": "#f8f9fa"},
-          "stroke": {"signal": "gridColor"},
-          "strokeWidth": {"value": 1},
-          "opacity": {"value": 0.3}
-        }
-      }
-    },
-    {
-      "type": "rect",
-      "name": "tooltip",
-      "encode": {
-        "enter": {
-          "fill": {"value": "#ffffff"},
-          "stroke": {"signal": "textColour"},
-          "strokeWidth": {"value": 1},
-          "cornerRadius": {"value": 4},
-          "opacity": {"value": 0}
-        }
-      }
-    },
-    {
-      "type": "text",
-      "name": "tooltipText",
-      "encode": {
-        "enter": {
-          "fontSize": {"value": 12},
-          "fill": {"signal": "textColour"},
-          "opacity": {"value": 0}
         }
       }
     }
