@@ -378,6 +378,20 @@
           "force": true
         }
       ]
+    },
+    {
+      "name": "gridColor",
+      "value": "#dee2e6"
+    },
+    {
+      "name": "xy",
+      "value": [0, 0],
+      "on": [
+        {
+          "events": "pointerdown",
+          "update": "[x(), y()]"
+        }
+      ]
     }
   ],
   "data": [
